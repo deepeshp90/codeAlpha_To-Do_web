@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHqz5FVfbL8RUwX05Ql59GhlQp3sCME5V6zA4bQ3cP/6fRcv9pH6YB5ynj1Y+3Vb9m0OhVGQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg,#153677, #4e085f);
+        }
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin: 0 0 20px 0;
+            text-align: center;
+        }
+        .input-group {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px 0 0 4px;
+        }
+        .input-group button {
+            padding: 10px 20px;
+            border: 1px solid #ccc;
+            border-left: none;
+            background-color: #28a745;
+            color: white;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+        .input-group button:hover {
+            background-color: #218838;
+        }
+        .list-container {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .list-container li {
+            padding: 10px;
+            background: #f9f9f9;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .list-container li.completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .list-container li button {
+            background: none;
+            border: none;
+            color: #d9534f;
+            cursor: pointer;
+        }
+        .list-container li button:hover {
+            color: #c9302c;
+        }
+        .list-container li .edit {
+            color: #5bc0de;
+            margin-right: 10px;
+        }
+        .list-container li .edit:hover {
+            color: #31b0d5;
+        }
+        footer {
+            width: 100%;
+            background: #fff;
+            padding: 10px;
+            text-align: center;
+            border-top: 1px solid #ddd;
+            position: absolute;
+            bottom: 0;
+        }
+        footer a {
+            margin: 0 10px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+        .fa {
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>To-Do List</h1>
+        <div class="input-group">
+            <input type="text" id="todo-input" placeholder="Enter a new task">
+            <button id="add-button">Add</button>
+        </div>
+        <ul class="list-container" id="todo-list">
+            <!-- To-Do items will be appended here -->
+        </ul>
+    </div>
+
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadTodos);
+        document.getElementById('add-button').addEventListener('click', addTodo);
+        document.getElementById('todo-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTodo();
+            }
+        });
+
+        function addTodo() {
+            const input = document.getElementById('todo-input');
+            const task = input.value.trim();
+            if (task) {
+                const todos = getTodosFromLocalStorage();
+                const newTodo = { id: Date.now(), task, completed: false };
+                todos.push(newTodo);
+                setTodosToLocalStorage(todos);
+                appendTodoToDOM(newTodo);
+                input.value = '';
+            }
+        }
+
+        function appendTodoToDOM(todo) {
+            const listItem = document.createElement('li');
+            listItem.setAttribute('data-id', todo.id);
+            if (todo.completed) listItem.classList.add('completed');
+            listItem.innerHTML = `
+                <span>${todo.task}</span>
+                <div>
+                    <button class="edit">Edit</button>
+                    <button class="complete">${todo.completed ? 'Undo' : 'Complete'}</button>
+                    <button class="remove">Remove</button>
+                </div>
+            `;
+            document.getElementById('todo-list').appendChild(listItem);
+
+            listItem.querySelector('.edit').addEventListener('click', function() {
+                const newTask = prompt('Edit task', todo.task);
+                if (newTask) {
+                    todo.task = newTask.trim();
+                    updateTodoInLocalStorage(todo);
+                    listItem.querySelector('span').textContent = todo.task;
+                }
+            });
+
+            listItem.querySelector('.complete').addEventListener('click', function() {
+                todo.completed = !todo.completed;
+                updateTodoInLocalStorage(todo);
+                listItem.classList.toggle('completed');
+                this.textContent = todo.completed ? 'Undo' : 'Complete';
+            });
+
+            listItem.querySelector('.remove').addEventListener('click', function() {
+                removeTodoFromLocalStorage(todo.id);
+                listItem.remove();
+            });
+        }
+
+        function getTodosFromLocalStorage() {
+            return JSON.parse(localStorage.getItem('todos')) || [];
+        }
+
+        function setTodosToLocalStorage(todos) {
+            localStorage.setItem('todos', JSON.stringify(todos));
+        }
+
+        function updateTodoInLocalStorage(updatedTodo) {
+            const todos = getTodosFromLocalStorage();
+            const index = todos.findIndex(todo => todo.id === updatedTodo.id);
+            if (index !== -1) {
+                todos[index] = updatedTodo;
+                setTodosToLocalStorage(todos);
+            }
+        }
+
+        function removeTodoFromLocalStorage(id) {
+            const todos = getTodosFromLocalStorage();
+            const filteredTodos = todos.filter(todo => todo.id !== id);
+            setTodosToLocalStorage(filteredTodos);
+        }
+
+        function loadTodos() {
+            const todos = getTodosFromLocalStorage();
+            todos.forEach(todo => appendTodoToDOM(todo));
+        }
+    </script>
+</body>
+</html>
